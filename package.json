@@ -20,6 +20,8 @@
   },
   "homepage": "https://github.com/Vuurvos1/frontend-applications#readme",
   "dependencies": {
+    "d3": "^6.2.0",
+    "d3-hexgrid": "^0.3.0",
     "sirv-cli": "^1.0.0"
   },
   "devDependencies": {
