@@ -1,6 +1,8 @@
 <script>
   import { onMount } from 'svelte';
 
+  import HexMap from './components/hexmap.svelte';
+
   import {
     max,
     geoPath,
@@ -15,13 +17,38 @@
 
   import { hexgrid } from 'd3-hexgrid';
 
-  import { bindHexData, chartSetup } from './modules/chartHelpers.svelte';
+  import { bindHexData, chartSetup } from './modules/chartHelpers';
 
-  console.log(chartSetup);
+  export let geoData;
+  export let points;
 
-  // querySelector
-  const q = document.querySelector.bind(document);
-  const qa = document.querySelectorAll.bind(document);
+  async function fetchData() {
+    // check if there is saved data
+    if (localStorage.getItem('geoData') && localStorage.getItem('points')) {
+      geoData = JSON.parse(localStorage.getItem('geoData'));
+      points = JSON.parse(localStorage.getItem('points'));
+    } else {
+      // fetch and save data if not found
+      const geoDataUrl =
+        'https://cartomap.github.io/nl/wgs84/arbeidsmarktregio_2020.geojson';
+      const pointsUrl = `http://localhost:3000/garageGeo`;
+
+      [geoData, points] = await Promise.all([
+        await (await fetch(geoDataUrl)).json(),
+        await (
+          await fetch(pointsUrl, {
+            method: 'POST',
+          })
+        ).json(),
+      ]);
+
+      // save data to local storage
+      localStorage.setItem('geoData', JSON.stringify(geoData));
+      localStorage.setItem('points', JSON.stringify(points));
+    }
+
+    return [geoData, points];
+  }
 
   async function mainCode() {
     const url = `${window.location.origin}`;
@@ -40,9 +67,6 @@
         })
       ).json(),
     ]);
-
-    // console.log(geoData);
-    // console.log(points);
 
     // do d3 stuff
     const mapSvg = chartSetup('#map svg', {
@@ -151,8 +175,6 @@
      * @param {object} data - object array containg data from the hexagon
      */
     function drawBarChart(data) {
-      console.log(data);
-
       const xValue = (d) => {
         return Number(d.capacity);
       };
@@ -197,8 +219,6 @@
   }
 
   mainCode();
-
-  onMount(() => {});
 </script>
 
 <style>
@@ -218,18 +238,6 @@
     padding: 0;
     box-sizing: border-box;
   }
-
-  .point {
-    cursor: pointer;
-  }
-
-  .garageCircle {
-    fill: aquamarine;
-    fill-opacity: 0.5;
-    stroke: darkcyan;
-    stroke-opacity: 1;
-  }
-
   body {
     min-height: 100vh;
     background-color: var(--offWhite);
@@ -241,6 +249,7 @@
     font-size: 3rem;
 
     margin-bottom: 0.4em;
+    text-align: center;
   }
 
   h2 {
@@ -256,38 +265,13 @@
   }
 
   main {
-    display: grid;
+    display: flex;
+    flex-direction: column;
+    /* display: grid;
     grid-template-columns: 1fr;
     grid-template-rows: 80vh;
     height: 100vh;
-    width: 100vw;
-  }
-
-  .map {
-    width: 100%;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-
-    padding: 1rem 0;
-  }
-
-  .map h1 {
-    text-align: center;
-  }
-
-  #map {
-    width: 100%;
-    height: 100%;
-    max-height: 75vh;
-    padding: 1rem;
-  }
-
-  #map svg {
-    width: 100%;
-    height: 100%;
+    width: 100vw; */
   }
 
   #bar {
@@ -360,8 +344,12 @@
   }
 </style>
 
+<header>
+  <h1>Parkeer dichtheid binnen Nederland</h1>
+</header>
+
 <main>
-  <section class="map">
+  <!-- <section class="map">
     <h1>Parking Density</h1>
     <div id="map"><svg /></div>
   </section>
@@ -369,11 +357,26 @@
   <section class="bar">
     <h2>Per garage capacity</h2>
 
-    <div id="bar">
-      <div class="info">
+    <div id="bar"> -->
+  <!-- <div class="info">
         <p>Click on a coloured hexagon to see more details</p>
-      </div>
-      <svg />
+      </div> -->
+  <!-- <svg />
     </div>
-  </section>
+  </section> -->
+
+  {#await fetchData()}
+    <h2>Loading Map</h2>
+  {:then data}
+    <HexMap {data} />
+  {:catch error}
+    <p style="color: red">{error.message}</p>
+  {/await}
 </main>
+
+<footer>
+  <p>
+    &copy; Sam de Kanter |
+    <a href="https://github.com/vuurvos1/frontend-applications">Github Repo</a>
+  </p>
+</footer>
