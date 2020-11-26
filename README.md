@@ -24,7 +24,7 @@ Also, make sure to check my [Frontend Data](https://github.com/Vuurvos1/frontend
 
 ### See it live
 
-The site is also hosted on Surge, check it out [here](https://moffel.surge.sh/)
+The site is also hosted on Surge, check it out [here](https://sam-fa.surge.sh/)
 
 ### 🛠 Build with
 

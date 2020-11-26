@@ -18,7 +18,7 @@
       // fetch and save data if not found
       const geoDataUrl =
         'https://cartomap.github.io/nl/wgs84/arbeidsmarktregio_2020.geojson';
-      const pointsUrl = `https://gist.githubusercontent.com/Vuurvos1/0f2e26a2e24732991f0d5b0120d8bb99/raw/a1f2c961e1c0c6bb4f17185b7c11dca240d51e2a/geoSpecCombined.json`;
+      const pointsUrl = `https://gist.githubusercontent.com/Vuurvos1/0f2e26a2e24732991f0d5b0120d8bb99/raw/24aa0e4fb59a3334b70aa8f037a601106201e773/geoSpecCombined.json`;
 
       [geoData, points] = await Promise.all([
         await (await fetch(geoDataUrl)).json(),
@@ -37,23 +37,26 @@
 <style>
   :global(h1, h2, h3, h4) {
     font-family: 'Ubuntu', sans-serif;
+    font-weight: 300;
+
+    margin-bottom: 0.6em;
   }
   :global(h1) {
-    font-weight: 300;
     font-size: 3rem;
 
     margin-bottom: 0.8em;
   }
 
   :global(h2) {
-    font-weight: 300;
-    font-size: 2.25rem;
-
-    margin-bottom: 0.6em;
+    font-size: 2rem;
   }
 
-  :global(p, a) {
-    font-family: 'Open Sans', sans-serif;
+  :global(h3) {
+    font-size: 1.5rem;
+  }
+
+  :global(p, a, text) {
+    font-family: 'Roboto', sans-serif;
   }
 
   :global(p) {
@@ -65,7 +68,7 @@
     color: var(--black);
   }
 
-  header {
+  :global() header {
     margin: 0 auto;
     padding: 3.6rem 1.2rem 0 1.2rem;
 
@@ -86,10 +89,35 @@
     margin-bottom: 2rem;
   }
 
+  .infoText {
+    color: var(--white);
+    background-color: var(--error);
+
+    margin-bottom: 1.4em;
+    padding: 0.5rem 0.8rem 0.8rem 0.8rem;
+
+    border-radius: 0.5rem;
+  }
+
   #bronnen {
     margin-bottom: 3rem;
   }
+
+  #bronnen ul {
+    list-style-position: inside;
+  }
+
+  #bronnen li {
+    margin-bottom: 0.2em;
+  }
 </style>
+
+<svelte:head>
+  <link rel="preconnect" href="https://fonts.gstatic.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&family=Ubuntu:wght@300;400;500;700&display=swap"
+    rel="stylesheet" />
+</svelte:head>
 
 <header>
   <h1>Hoe zit het met de parkeer dichtheid binnen Nederland?</h1>
@@ -98,32 +126,31 @@
 <main>
   <section>
     <p>
-      Er zijn x aantal parkeerplaatsen binnen Nederland, Dat is 1 parkeer plek
-      per x Nederlanders of 1 parkeerplaats per x aantal autos. Maar hoe zijn
-      deze parkeerplaatsen dan verdeeld over Nederland?
+      Er zijn meer dan 15 miljoen parkeerplaatsen binnen Nederland. Dat is iets
+      meer dan een parkeerplek per Nederlanders, of 1,8 parkeerplaatsen per
+      autos. Maar hoe zijn deze parkeerplaatsen dan verdeeld over Nederland?
     </p>
 
     <p>
-      De meeste parkeerplekken binnen Nederland zijn echter geen parkeer garages
-      maar plaatsen langs de weg
+      De meeste parkeerplekken binnen Nederland zijn echter geen parkeergarages
+      maar plaatsen langs de weg.
     </p>
 
     {#await fetchData()}
       <h2>Loading Map</h2>
     {:then data}
-      <p>
+      <p class="infoText">
         <Info />
-        Data is niet genormalizeerd aan de hand van de bevolkingsdichtheid in
+        Data is niet genormaliseerd aan de hand van de bevolkingsdichtheid in
         een gebied.
       </p>
 
       <HexMap {data} />
 
       <p>
-        Dat een van de zeshoekjes geen kleur heeft wil niet zeggen dat er hier
-        geen parkeerplaatsen zijn, de meeste parkeerplaatsen in Nederland zijn
-        langs de straat en deze vizualizatie kijkt alleen naar de parkeer
-        garages binnen Nederland.
+        Je ziet misschien dat een groot van de zeshoekjes geen kleur heeft wil
+        niet zeggen dat er hier geen parkeerplaatsen zijn, de meeste
+        parkeerplaatsen in Nederland bevinden zich namelijk langs de straat.
       </p>
     {:catch error}
       <p style="color: red">{error.message}</p>
@@ -136,28 +163,16 @@
     <Barchart {width} />
   </section>
 
-  <!-- <section>
-    <h2>Toegankelijkheid Garages</h2>
-    {#await fetchData()}
-      <h2>Loading Map</h2>
-    {:then data}
-      <HexMap {data} />
-    {:catch error}
-      <p style="color: red">{error.message}</p>
-    {/await}
-
-    <p>
-      Uit deze data blijkt dat maar 13 van de 355 parkeer garages toegankelijk
-      zijn voor rolstoelen
-    </p>
-  </section> -->
-
   <section id="bronnen">
-    <h2>Sources</h2>
+    <h3>Sources</h3>
 
-    <a href="https://opendata.rdw.nl/">Datasets van Opendata RDW</a>
-    <a href="https://github.com/vuurvos1/frontend-applications">Bekijk de source
-      code op Github
-    </a>
+    <ul>
+      <li><a href="https://opendata.rdw.nl/">Datasets van Opendata RDW</a></li>
+      <li>
+        <a href="https://github.com/vuurvos1/frontend-applications">Source code
+          op Github
+        </a>
+      </li>
+    </ul>
   </section>
 </main>

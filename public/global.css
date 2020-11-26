@@ -3,7 +3,8 @@
   --white: #fff;
   --offWhite: #f8f8f8;
 
-  --highlight: #6200ee;
+  --highlight: #4fa1ff;
+  --error: #c73d50;
 
   --dropShadow: 0px 16px 24px rgba(0, 0, 0, 0.14),
     0px 6px 30px rgba(0, 0, 0, 0.12), 0px 8px 10px rgba(0, 0, 0, 0.2);

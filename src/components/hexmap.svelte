@@ -4,11 +4,14 @@
     geoMercator,
     scaleSequential,
     interpolateViridis,
+    max,
   } from 'd3';
 
   import { hexgrid } from 'd3-hexgrid';
 
   import { bindHexData } from './../modules/chartHelpers';
+
+  import { barData } from './../store';
 
   export let data;
 
@@ -63,7 +66,17 @@
     colors.push({ offset: `${i * 10}%`, col: `${colourScale(i / 100)}` });
   }
 
-  import { barData } from './../store';
+  const garages = [];
+
+  const maxGarages = max(hex.grid.layout, (d) => {
+    return d.datapoints;
+  });
+
+  for (let i = 0; i < maxGarages; i++) {
+    if (i % 2 == 0) {
+      garages.push(i);
+    }
+  }
 
   function updateBarData(hex) {
     barData.set(hex);
@@ -71,9 +84,19 @@
 </script>
 
 <style>
-  .hexLegend {
-    max-width: 10rem;
-    height: auto;
+  .hexMap {
+    margin-bottom: 1rem;
+  }
+
+  .hexLegend p {
+    margin-bottom: 0.25em;
+    font-size: 0.8rem;
+    font-weight: bold;
+  }
+  .hexLegend svg {
+    height: 2rem;
+
+    margin-bottom: 1rem;
   }
 
   .hexLegend rect {
@@ -81,6 +104,10 @@
     width: 100%;
 
     fill: url(#hexGradient);
+  }
+
+  .hexLegend line {
+    stroke: currentColor;
   }
 
   .point {
@@ -98,7 +125,7 @@
         transform={`translate(${hexagon.x} ${hexagon.y})`}
         fill={!hexagon.pointDensity ? '#fff' : colourScale(hexagon.pointDensity)}
         class={hexagon.length > 0 ? 'point' : ''}
-        stroke="#F4EB9F">
+        stroke="var(--highlight">
         <title>{calculateCapacity(hexagon)}</title>
       </path>
     {/each}
@@ -106,14 +133,26 @@
 </svg>
 
 <!-- legend -->
-<svg height="16" class="hexLegend">
-  <rect />
+<div class="hexLegend">
+  <p>Aantal garages:</p>
+  <svg width="300">
+    <g transform={`translate(${10}, 0)`}>
+      <rect width="285" />
 
-  <defs>
-    <linearGradient id="hexGradient">
-      {#each colors as col}
-        <stop offset={col.offset} stop-color={col.col} />
+      {#each garages as tick, i}
+        <g transform={`translate(${(285 / garages.length) * i}, 0)`}>
+          <line y2="16" />
+          <text y="32" text-anchor="middle">{tick}</text>
+        </g>
       {/each}
-    </linearGradient>
-  </defs>
-</svg>
+    </g>
+
+    <defs>
+      <linearGradient id="hexGradient">
+        {#each colors as col}
+          <stop offset={col.offset} stop-color={col.col} />
+        {/each}
+      </linearGradient>
+    </defs>
+  </svg>
+</div>
