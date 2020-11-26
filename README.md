@@ -24,8 +24,7 @@ Also, make sure to check my [Frontend Data](https://github.com/Vuurvos1/frontend
 
 ### See it live
 
-The site is also hosted on Glitch, note that it can take a while to launch the app.
-See it here: [frontend-data.glitch.me/](frontend-data.glitch.me/)
+The site is also hosted on Surge, check it out [here](https://moffel.surge.sh/)
 
 ### 🛠 Build with
 

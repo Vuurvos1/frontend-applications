@@ -7,8 +7,6 @@
   } from 'd3';
 
   import { hexgrid } from 'd3-hexgrid';
-  import { onMount } from 'svelte';
-  import { q } from '../modules/helpers';
 
   import { bindHexData } from './../modules/chartHelpers';
 
@@ -17,8 +15,8 @@
   const geoData = data[0];
   const points = data[1];
 
-  const width = 960;
-  const height = 500;
+  const height = 620;
+  const width = 500;
 
   // Projection and path
   const projection = geoMercator().fitSize([width, height], geoData);
@@ -37,7 +35,7 @@
     .geography(geoData)
     .pathGenerator(geoPath1)
     .projection(projection)
-    .hexRadius(5.2);
+    .hexRadius(5.4);
 
   // Instantiate the generator
   const hex = hexgrid1(points);
@@ -64,6 +62,12 @@
   for (let i = 0; i < 10; i++) {
     colors.push({ offset: `${i * 10}%`, col: `${colourScale(i / 100)}` });
   }
+
+  import { barData } from './../store';
+
+  function updateBarData(hex) {
+    barData.set(hex);
+  }
 </script>
 
 <style>
@@ -73,7 +77,7 @@
   }
 
   .hexLegend rect {
-    height: 1rem;
+    height: 0.6rem;
     width: 100%;
 
     fill: url(#hexGradient);
@@ -85,32 +89,31 @@
 </style>
 
 <!-- map -->
-<section>
-  <svg class="hexMap" {width} {height}>
-    <g>
-      {#each hex.grid.layout as hexagon}
-        <path
-          d={hex.hexagon()}
-          transform={`translate(${hexagon.x} ${hexagon.y})`}
-          fill={!hexagon.pointDensity ? '#fff' : colourScale(hexagon.pointDensity)}
-          class={hexagon.length > 0 ? 'point' : ''}
-          stroke="#F4EB9F">
-          <title>{calculateCapacity(hexagon)}</title>
-        </path>
+<svg class="hexMap" viewBox={`0 0 ${width} ${height}`}>
+  <g>
+    {#each hex.grid.layout as hexagon}
+      <path
+        on:click={hexagon.datapoints > 0 ? () => updateBarData(hexagon) : {}}
+        d={hex.hexagon()}
+        transform={`translate(${hexagon.x} ${hexagon.y})`}
+        fill={!hexagon.pointDensity ? '#fff' : colourScale(hexagon.pointDensity)}
+        class={hexagon.length > 0 ? 'point' : ''}
+        stroke="#F4EB9F">
+        <title>{calculateCapacity(hexagon)}</title>
+      </path>
+    {/each}
+  </g>
+</svg>
+
+<!-- legend -->
+<svg height="16" class="hexLegend">
+  <rect />
+
+  <defs>
+    <linearGradient id="hexGradient">
+      {#each colors as col}
+        <stop offset={col.offset} stop-color={col.col} />
       {/each}
-    </g>
-  </svg>
-
-  <!-- legend -->
-  <svg class="hexLegend">
-    <rect />
-
-    <defs>
-      <linearGradient id="hexGradient">
-        {#each colors as col, i}
-          <stop offset={col.offset} stop-color={col.col} />
-        {/each}
-      </linearGradient>
-    </defs>
-  </svg>
-</section>
+    </linearGradient>
+  </defs>
+</svg>

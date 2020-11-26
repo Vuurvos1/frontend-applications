@@ -1,26 +1,13 @@
 <script>
-  import { onMount } from 'svelte';
-
   import HexMap from './components/hexmap.svelte';
+  import Barchart from './components/barchart.svelte';
 
-  import {
-    max,
-    geoPath,
-    geoMercator,
-    scaleSequential,
-    interpolateViridis,
-    scaleLinear,
-    scaleBand,
-    axisLeft,
-    axisBottom,
-  } from 'd3';
+  import Info from './components/icons/info.svelte';
 
-  import { hexgrid } from 'd3-hexgrid';
+  let geoData;
+  let points;
 
-  import { bindHexData, chartSetup } from './modules/chartHelpers';
-
-  export let geoData;
-  export let points;
+  let width;
 
   async function fetchData() {
     // check if there is saved data
@@ -31,15 +18,11 @@
       // fetch and save data if not found
       const geoDataUrl =
         'https://cartomap.github.io/nl/wgs84/arbeidsmarktregio_2020.geojson';
-      const pointsUrl = `http://localhost:3000/garageGeo`;
+      const pointsUrl = `https://gist.githubusercontent.com/Vuurvos1/0f2e26a2e24732991f0d5b0120d8bb99/raw/a1f2c961e1c0c6bb4f17185b7c11dca240d51e2a/geoSpecCombined.json`;
 
       [geoData, points] = await Promise.all([
         await (await fetch(geoDataUrl)).json(),
-        await (
-          await fetch(pointsUrl, {
-            method: 'POST',
-          })
-        ).json(),
+        await (await fetch(pointsUrl)).json(),
       ]);
 
       // save data to local storage
@@ -49,334 +32,132 @@
 
     return [geoData, points];
   }
-
-  async function mainCode() {
-    const url = `${window.location.origin}`;
-
-    const geoDataUrl =
-      'https://cartomap.github.io/nl/wgs84/arbeidsmarktregio_2020.geojson';
-    // const pointsUrl = `${url}/garageGeo`;
-    const pointsUrl = `http://localhost:3000/garageGeo`;
-
-    // fetch data
-    const [geoData, points] = await Promise.all([
-      await (await fetch(geoDataUrl)).json(),
-      await (
-        await fetch(pointsUrl, {
-          method: 'POST',
-        })
-      ).json(),
-    ]);
-
-    // do d3 stuff
-    const mapSvg = chartSetup('#map svg', {
-      top: 30,
-      right: 30,
-      bottom: 30,
-      left: 30,
-    });
-
-    // Projection and path
-    const projection = geoMercator().fitSize([mapSvg.w, mapSvg.h], geoData);
-    const geoPath1 = geoPath().projection(projection);
-
-    // Prep user data
-    points.forEach((site) => {
-      const coords = projection([+site.lng, +site.lat]);
-      site.x = coords[0];
-      site.y = coords[1];
-    });
-
-    // Create a hexgrid generator
-    const hexgrid1 = hexgrid()
-      .extent([mapSvg.w, mapSvg.h])
-      .geography(geoData)
-      .pathGenerator(geoPath1)
-      .projection(projection)
-      .hexRadius(5.2);
-
-    // Instantiate the generator
-    const hex = hexgrid1(points);
-
-    // bind dataset to hexgrid hexagons
-    bindHexData(hex, points);
-
-    // Create exponential colorScale
-    const colourScale = scaleSequential(function (t) {
-      const tNew = Math.pow(t, 10);
-      return interpolateViridis(tNew);
-    }).domain([...hex.grid.extentPointDensity].reverse());
-
-    // Draw the hexes
-    mapSvg
-      .append('g')
-      .selectAll('path')
-      .data(hex.grid.layout)
-      .enter()
-      .append('path')
-      .attr('d', hex.hexagon())
-      .attr('transform', (d) => `translate(${d.x} ${d.y})`)
-      .style('fill', (d) =>
-        !d.pointDensity ? '#fff' : colourScale(d.pointDensity)
-      )
-      .attr('class', (d) => {
-        if (d.length > 0) {
-          return 'point';
-        }
-      })
-      .style('stroke', '#F4EB9F')
-      .on('click', (e, d) => {
-        d.datapoints > 0 ? drawBarChart(d) : null;
-      })
-      .append('title')
-      .text((d) => {
-        let totalCapacity = 0;
-        for (let i = 0; i < d.length; i++) {
-          totalCapacity += Number(d[i].capacity);
-        }
-        return `Total capacity: ${totalCapacity}`;
-      });
-
-    // initialize barchart
-    const barMargin = {
-      left: 240,
-      right: 30,
-      top: 20,
-      bottom: 60,
-    };
-
-    const barSvg = chartSetup('#bar svg', barMargin);
-
-    // setup barchart scales
-    const xScale = scaleLinear().range([0, barSvg.w]);
-
-    const yScale = scaleBand().range([0, barSvg.h]).padding(0.1);
-
-    const g = barSvg
-      .append('g')
-      .attr('transform', `translate(${barMargin.left}, ${barMargin.top})`);
-
-    barSvg
-      .append('text')
-      .attr('text-anchor', 'end')
-      .attr('x', barSvg.w + barMargin.left - barMargin.right)
-      .attr('y', barSvg.h + barMargin.top + 40)
-      .text('Garage capacity');
-
-    // setup axises
-    const barY = g.append('g').call(axisLeft(yScale));
-    const barX = g
-      .append('g')
-      .call(axisBottom(xScale))
-      .attr('transform', `translate(0, ${barSvg.h})`);
-
-    /**
-     * Update an existing barchart with new data
-     * @param {object} data - object array containg data from the hexagon
-     */
-    function drawBarChart(data) {
-      const xValue = (d) => {
-        return Number(d.capacity);
-      };
-
-      const yValue = (d) => {
-        // if string to long chop of text between brackets
-        if (d.areadesc.length < 25) {
-          return d.areadesc;
-        } else {
-          return d.areadesc.replace(/(\(.*?\))/g, '').trim();
-        }
-      };
-
-      const xScale = scaleLinear()
-        .domain([0, max(data, xValue)])
-        .range([0, barSvg.w]);
-
-      const yScale = scaleBand()
-        .domain(data.map(yValue))
-        .range([0, barSvg.h])
-        .padding(0.1);
-
-      barY.call(axisLeft(yScale));
-      barX.call(axisBottom(xScale));
-
-      const u = g.selectAll('rect').data(data);
-
-      u.enter()
-        .append('rect')
-        .merge(u)
-        .transition()
-        .attr('y', (d) => {
-          return yScale(yValue(d));
-        })
-        .attr('width', (d) => {
-          return xScale(xValue(d));
-        })
-        .attr('height', yScale.bandwidth());
-
-      u.exit().remove();
-    }
-  }
-
-  mainCode();
 </script>
 
 <style>
-  :root {
-    --blackL: #000;
-    --white: #fff;
-    --offWhite: #f8f8f8;
-
-    --highlight: #6200ee;
-
-    --dropShadow: 0px 16px 24px rgba(0, 0, 0, 0.14),
-      0px 6px 30px rgba(0, 0, 0, 0.12), 0px 8px 10px rgba(0, 0, 0, 0.2);
-  }
-
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  body {
-    min-height: 100vh;
-    background-color: var(--offWhite);
-  }
-
-  h1 {
+  :global(h1, h2, h3, h4) {
     font-family: 'Ubuntu', sans-serif;
+  }
+  :global(h1) {
     font-weight: 300;
     font-size: 3rem;
 
-    margin-bottom: 0.4em;
-    text-align: center;
+    margin-bottom: 0.8em;
   }
 
-  h2 {
-    font-family: 'Ubuntu', sans-serif;
+  :global(h2) {
     font-weight: 300;
     font-size: 2.25rem;
 
-    margin-bottom: 0.4em;
+    margin-bottom: 0.6em;
   }
 
-  p {
+  :global(p, a) {
     font-family: 'Open Sans', sans-serif;
+  }
+
+  :global(p) {
+    margin-bottom: 0.8em;
+  }
+
+  :global(a) {
+    text-decoration: underline;
+    color: var(--black);
+  }
+
+  header {
+    margin: 0 auto;
+    padding: 3.6rem 1.2rem 0 1.2rem;
+
+    max-width: 35rem;
   }
 
   main {
     display: flex;
     flex-direction: column;
-    /* display: grid;
-    grid-template-columns: 1fr;
-    grid-template-rows: 80vh;
-    height: 100vh;
-    width: 100vw; */
+
+    margin: 0 auto;
+    padding: 0 1.2rem;
+
+    max-width: 35rem;
   }
 
-  #bar {
-    width: 100%;
-    height: 100%;
-    max-height: 32rem;
-    margin: 1rem;
-
-    position: relative;
+  main section {
+    margin-bottom: 2rem;
   }
 
-  #bar .info {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background-color: var(--offWhite);
-  }
-
-  #bar .info p {
-    text-align: center;
-  }
-
-  #bar svg {
-    width: 100%;
-    height: 100%;
-  }
-
-  .bar {
-    box-shadow: var(--dropShadow);
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-
-    padding: 1rem 0;
-  }
-
-  .bar rect {
-    fill: var(--highlight);
-  }
-
-  .bar text {
-    font-family: 'Open Sans', sans-serif;
-    font-weight: 400;
-    font-size: 0.825rem;
-  }
-
-  /* Tablet */
-  @media screen and (min-width: 48rem) {
-    main {
-      grid-template-columns: 1fr 1fr;
-      height: 100vh;
-      width: 100vw;
-    }
-
-    .map,
-    .bar {
-      height: 100vh;
-    }
-  }
-
-  /* Desktop */
-  @media screen and (min-width: 64rem) {
+  #bronnen {
+    margin-bottom: 3rem;
   }
 </style>
 
 <header>
-  <h1>Parkeer dichtheid binnen Nederland</h1>
+  <h1>Hoe zit het met de parkeer dichtheid binnen Nederland?</h1>
 </header>
 
 <main>
-  <!-- <section class="map">
-    <h1>Parking Density</h1>
-    <div id="map"><svg /></div>
+  <section>
+    <p>
+      Er zijn x aantal parkeerplaatsen binnen Nederland, Dat is 1 parkeer plek
+      per x Nederlanders of 1 parkeerplaats per x aantal autos. Maar hoe zijn
+      deze parkeerplaatsen dan verdeeld over Nederland?
+    </p>
+
+    <p>
+      De meeste parkeerplekken binnen Nederland zijn echter geen parkeer garages
+      maar plaatsen langs de weg
+    </p>
+
+    {#await fetchData()}
+      <h2>Loading Map</h2>
+    {:then data}
+      <p>
+        <Info />
+        Data is niet genormalizeerd aan de hand van de bevolkingsdichtheid in
+        een gebied.
+      </p>
+
+      <HexMap {data} />
+
+      <p>
+        Dat een van de zeshoekjes geen kleur heeft wil niet zeggen dat er hier
+        geen parkeerplaatsen zijn, de meeste parkeerplaatsen in Nederland zijn
+        langs de straat en deze vizualizatie kijkt alleen naar de parkeer
+        garages binnen Nederland.
+      </p>
+    {:catch error}
+      <p style="color: red">{error.message}</p>
+    {/await}
   </section>
 
-  <section class="bar">
-    <h2>Per garage capacity</h2>
+  <section bind:clientWidth={width}>
+    <h2>Capaciteit per garage</h2>
 
-    <div id="bar"> -->
-  <!-- <div class="info">
-        <p>Click on a coloured hexagon to see more details</p>
-      </div> -->
-  <!-- <svg />
-    </div>
+    <Barchart {width} />
+  </section>
+
+  <!-- <section>
+    <h2>Toegankelijkheid Garages</h2>
+    {#await fetchData()}
+      <h2>Loading Map</h2>
+    {:then data}
+      <HexMap {data} />
+    {:catch error}
+      <p style="color: red">{error.message}</p>
+    {/await}
+
+    <p>
+      Uit deze data blijkt dat maar 13 van de 355 parkeer garages toegankelijk
+      zijn voor rolstoelen
+    </p>
   </section> -->
 
-  {#await fetchData()}
-    <h2>Loading Map</h2>
-  {:then data}
-    <HexMap {data} />
-  {:catch error}
-    <p style="color: red">{error.message}</p>
-  {/await}
-</main>
+  <section id="bronnen">
+    <h2>Sources</h2>
 
-<footer>
-  <p>
-    &copy; Sam de Kanter |
-    <a href="https://github.com/vuurvos1/frontend-applications">Github Repo</a>
-  </p>
-</footer>
+    <a href="https://opendata.rdw.nl/">Datasets van Opendata RDW</a>
+    <a href="https://github.com/vuurvos1/frontend-applications">Bekijk de source
+      code op Github
+    </a>
+  </section>
+</main>
